@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Interattiva Mercato Aurifero - Maggio 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Application Structure Plan: 
+        L'applicazione è strutturata come una Single Page Application (SPA) con una barra di navigazione superiore fissa per un facile accesso alle diverse sezioni tematiche. Le sezioni principali includono:
+        1.  Panoramica: Un riassunto esecutivo e i dati salienti del mercato attuale.
+        2.  Dinamiche di Mercato: Performance recente dei prezzi, sentimento e posizionamento degli investitori (focus su ETF).
+        3.  Fattori Fondamentali: Analisi interattiva di politica monetaria, inflazione, dollaro USA e geopolitica.
+        4.  Domanda e Offerta: Dettagli su gioielleria, investimenti, acquisti delle banche centrali (con grafico interattivo per la Tabella 1 del report), domanda per settore (con grafico per la Tabella 2), produzione mineraria e riciclo.
+        5.  Storia e Portafoglio: Evoluzione storica dei prezzi (con grafico per la Tabella 3), performance durante le crisi, benefici di diversificazione.
+        6.  Confronti ed ESG: Oro vs. Bitcoin (con tabella comparativa basata sulla Tabella 4), impatto dei fattori ESG.
+        7.  Outlook e Previsioni: Opinioni degli esperti, outlook del WGC, previsioni di prezzo (con grafico interattivo per la Tabella 5).
+        Questa struttura è stata scelta per scomporre le informazioni complesse del report in segmenti logici e facilmente digeribili. L'approccio a dashboard con navigazione tematica permette all'utente di esplorare i contenuti in modo non lineare, concentrandosi sulle aree di maggiore interesse. L'uso di grafici interattivi e testo espandibile mira a migliorare l'engagement e la comprensione rispetto alla lettura di un report statico. La priorità è la facilità d'uso e la chiara presentazione dei dati.
+    -->
+    <!-- Visualization & Content Choices: 
+        - Panoramica: Testo (Executive Summary), Dati chiave (Prezzo attuale, Variazione % YTD). Goal: Informare. Viz: Testo + Stat dinamiche. Interaction: Nessuna. Justification: Overview rapido.
+        - Performance Prezzi Recente (Dinamiche Mercato): Grafico a linee (Chart.js) per London Gold Price. Goal: Mostrare trend. Viz: Line chart. Interaction: Tooltip. Justification: Visualizzazione trend.
+        - Flussi ETF (Dinamiche Mercato): Grafico a barre (Chart.js) per flussi ETF Cina. Goal: Confrontare/Informare. Viz: Bar chart. Interaction: Tooltip. Justification: Visualizzazione chiara flussi.
+        - Fattori Fondamentali (Testo + Icone): Sezioni cliccabili per Politica Monetaria, Inflazione, USD, Geopolitica. Goal: Informare/Organizzare. Viz: HTML/CSS Tailwind, Icone Unicode. Interaction: Click per espandere/collassare. Justification: Presentazione concisa.
+        - Acquisti Banche Centrali (Tabella 1 - Domanda/Offerta): Grafico a barre (Chart.js) per acquisti netti. Goal: Confrontare. Viz: Bar chart. Interaction: Tooltip. Justification: Visualizzazione dati tabellari.
+        - Domanda per Settore (Tabella 2 - Domanda/Offerta): Grafico a ciambella (Chart.js) per Q1 2025. Goal: Mostrare proporzioni. Viz: Donut chart. Interaction: Tooltip. Justification: Visualizzazione quote.
+        - Performance Storica (Tabella 3 - Storia/Portafoglio): Grafico a linee (Chart.js) per variazioni a lungo termine. Goal: Mostrare trend. Viz: Line chart. Interaction: Tooltip. Justification: Visualizzazione trend storici.
+        - Oro vs. Bitcoin (Tabella 4 - Confronti/ESG): Tabella HTML/Tailwind. Goal: Confrontare. Viz: Tabella. Interaction: Nessuna. Justification: Confronto diretto.
+        - Fattori ESG (Testo + Icone - Confronti/ESG): Sezioni cliccabili. Goal: Informare/Organizzare. Viz: HTML/CSS Tailwind, Icone Unicode. Interaction: Click per espandere/collassare. Justification: Info strutturata.
+        - Previsioni Prezzo (Tabella 5 - Outlook): Grafico a barre (Chart.js) per previsioni istituzioni. Goal: Confrontare. Viz: Bar chart. Interaction: Tooltip. Justification: Confronto visivo previsioni.
+        - Testo: Blocchi chiari e concisi, derivati dal report. Goal: Informare/Spiegare. Viz: Testo HTML. Justification: Contesto essenziale.
+        - Librerie: Chart.js per tutti i grafici (Canvas).
+        - NO SVG/Mermaid: Confermato.
+    -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f9fafb; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+        .nav-link { transition: all 0.3s ease; }
+        .nav-link.active { color: #d97706; border-bottom-color: #d97706; font-weight: 600;}
+        .nav-link:hover { color: #f59e0b; border-bottom-color: #f59e0b;}
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .collapsible.active + .accordion-content { max-height: 1000px; /* Adjust as needed */ }
+        .table-responsive { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-amber-50 text-neutral-800 antialiased">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-amber-600">Oro Insights</span>
+                </div>
+                <nav class="hidden md:flex space-x-4 items-center">
+                    <a href="#panoramica" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Panoramica</a>
+                    <a href="#dinamiche" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Dinamiche</a>
+                    <a href="#fattori" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Fattori</a>
+                    <a href="#domandaofferta" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Domanda/Offerta</a>
+                    <a href="#storia" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Storia</a>
+                    <a href="#confronti" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Confronti/ESG</a>
+                    <a href="#outlook" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-700 hover:text-amber-600 border-b-2 border-transparent">Outlook</a>
+                </nav>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-neutral-700 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg">
+            <a href="#panoramica" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Panoramica</a>
+            <a href="#dinamiche" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Dinamiche</a>
+            <a href="#fattori" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Fattori</a>
+            <a href="#domandaofferta" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Domanda/Offerta</a>
+            <a href="#storia" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Storia</a>
+            <a href="#confronti" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Confronti/ESG</a>
+            <a href="#outlook" class="block nav-link px-4 py-3 text-base font-medium text-neutral-700 hover:bg-amber-100 hover:text-amber-700">Outlook</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <section id="panoramica" class="content-section pt-8">
+            <h1 class="text-3xl font-bold text-amber-700 mb-6 text-center">Panoramica del Mercato Aurifero (Maggio 2025)</h1>
+            <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+                <p class="text-lg leading-relaxed mb-4">Il mercato dell'oro ha manifestato una notevole robustezza all'inizio del 2025, con prezzi che hanno costantemente superato la soglia dei $3.000 USD per oncia. Questa tendenza è spinta da una complessa interazione di fattori macroeconomici e geopolitici, inclusi acquisti da banche centrali, incertezza globale, preoccupazioni inflazionistiche e un rinnovato interesse degli investitori. L'oro assume un ruolo strategico crescente nei portafogli diversificati.</p>
+                <p class="text-md leading-relaxed">Questa dashboard interattiva esplora le dinamiche attuali, i fattori determinanti e le prospettive future del mercato aurifero, basandosi sull'analisi approfondita del report di Maggio 2025.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                    <h2 class="text-xl font-semibold text-neutral-700 mb-2">Prezzo Spot Indicativo (14 Maggio 2025)</h2>
+                    <p class="text-3xl font-bold text-amber-600">$3,245.02 <span class="text-lg text-neutral-500">USD/oncia</span></p>
+                    <p class="text-sm text-neutral-500 mt-1">(Fonte: Metals Daily, bid/ask)</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                    <h2 class="text-xl font-semibold text-neutral-700 mb-2">Variazione Prezzo Oro (YTD Aprile 2025)</h2>
+                    <p class="text-3xl font-bold text-green-600">+22,14%</p>
+                    <p class="text-sm text-neutral-500 mt-1">(Fonte: YCharts, London Gold Price)</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="dinamiche" class="content-section pt-8">
+            <h2 class="text-2xl font-bold text-amber-700 mb-6 text-center">Dinamiche di Mercato</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Performance Prezzi Recente</h3>
+                    <p class="text-sm text-neutral-600 mb-4">L'oro ha mostrato una performance robusta nel 2024 e inizio 2025, con il London Gold Price ad Aprile 2025 a $3.217,64 USD/oncia (+7,86% vs Marzo 2025, +38,01% YoY).</p>
+                    <div class="chart-container"><canvas id="recentPriceChart"></canvas></div>
+                    <p class="text-xs text-neutral-500 mt-2 text-center">Dati simulati basati sul trend descritto nel report.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Sentimento e Posizionamento Investitori</h3>
+                    <p class="text-sm text-neutral-600 mb-4">Sentimento marcatamente rialzista. Significativi afflussi negli ETF sull'oro, specialmente in Asia (Cina), con record ad Aprile 2025 (49 mld RMB / 65 tonnellate).</p>
+                    <div class="chart-container"><canvas id="etfFlowsChart"></canvas></div>
+                     <p class="text-xs text-neutral-500 mt-2 text-center">Illustra i flussi record negli ETF auriferi cinesi ad Aprile 2025.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="fattori" class="content-section pt-8">
+            <h2 class="text-2xl font-bold text-amber-700 mb-6 text-center">Fattori Fondamentali Determinanti</h2>
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <button class="collapsible w-full text-left font-semibold text-neutral-700 hover:text-amber-600 flex justify-between items-center">
+                        <span>🏛️ Politica Monetaria e Tassi di Interesse</span>
+                        <span class="arrow-icon text-amber-600 text-xl transform transition-transform duration-300">&#x25B6;</span>
+                    </button>
+                    <div class="accordion-content mt-2 text-sm text-neutral-600">
+                        <p>Tradizionalmente, relazione inversa con tassi reali. Recenti rialzi oro anche con attese tassi più alti se guidati da inflazione. Un allentamento Fed sarebbe rialzista. Incertezza su tagli tassi Fed (7% prob. a Maggio 2025) supporta l'oro.</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <button class="collapsible w-full text-left font-semibold text-neutral-700 hover:text-amber-600 flex justify-between items-center">
+                        <span>📈 Dinamiche Inflazionistiche</span>
+                        <span class="arrow-icon text-amber-600 text-xl transform transition-transform duration-300">&#x25B6;</span>
+                    </button>
+                    <div class="accordion-content mt-2 text-sm text-neutral-600">
+                        <p>L'oro è una copertura tradizionale contro l'inflazione. Persistenti preoccupazioni per l'inflazione nel 2025 sono un motore chiave. Aspettative Fed: 1 anno 3,6%, 3 anni 3,0%, 5 anni 2,9%.</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <button class="collapsible w-full text-left font-semibold text-neutral-700 hover:text-amber-600 flex justify-between items-center">
+                        <span>💵 Forza del Dollaro USA</span>
+                        <span class="arrow-icon text-amber-600 text-xl transform transition-transform duration-300">&#x25B6;</span>
+                    </button>
+                    <div class="accordion-content mt-2 text-sm text-neutral-600">
+                        <p>Tipicamente relazione inversa: dollaro debole = oro più economico in altre valute. Tuttavia, l'oro può salire anche con USD forte se i timori di svalutazione sono preponderanti. Tendenze de-dollarizzazione supportano l'oro.</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <button class="collapsible w-full text-left font-semibold text-neutral-700 hover:text-amber-600 flex justify-between items-center">
+                        <span>🌍 Instabilità Geopolitica ed Economica</span>
+                        <span class="arrow-icon text-amber-600 text-xl transform transition-transform duration-300">&#x25B6;</span>
+                    </button>
+                    <div class="accordion-content mt-2 text-sm text-neutral-600">
+                        <p>L'oro è un classico bene rifugio. Tensioni geopolitiche (es. USA-Cina, conflitti) o incertezza economica (recessione, politiche imprevedibili) spingono gli investitori verso l'oro.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="domandaofferta" class="content-section pt-8">
+            <h2 class="text-2xl font-bold text-amber-700 mb-6 text-center">Domanda e Offerta</h2>
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Acquisti Banche Centrali (Q1 2025)</h3>
+                    <p class="text-sm text-neutral-600 mb-4">Le banche centrali continuano ad essere acquirenti netti significativi (244 tonnellate nel Q1 2025). Fattori: de-dollarizzazione, rischio geopolitico, inflazione.</p>
+                    <div class="chart-container"><canvas id="centralBankChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Domanda per Settore (Q1 2025)</h3>
+                    <p class="text-sm text-neutral-600 mb-4">Domanda totale Q1 2025: 1.206 tonnellate (+1% YoY). Forte domanda investimento ETF (+170% YoY), gioielleria volumi bassi ma valore spesa +9%.</p>
+                    <div class="chart-container"><canvas id="demandBySectorChart"></canvas></div>
+                </div>
+            </div>
+             <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold text-neutral-700 mb-4">Dinamiche dell'Offerta</h3>
+                <div class="space-y-3 text-sm text-neutral-600">
+                    <p><strong>Produzione Mineraria:</strong> Q1 2025 record per un primo trimestre (856t, +1% YoY), ma compensata da minor riciclo. Aumento costi estrazione e normative rendono difficili nuovi progetti.</p>
+                    <p><strong>Flussi di Riciclo:</strong> Leggermente inferiori nel Q1 2025, nonostante prezzi alti, suggerendo fiducia nel valore a lungo termine.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="storia" class="content-section pt-8">
+            <h2 class="text-2xl font-bold text-amber-700 mb-6 text-center">Prospettiva Storica e Ruolo nel Portafoglio</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Evoluzione Prezzi a Lungo Termine</h3>
+                    <p class="text-sm text-neutral-600 mb-4">Fine Bretton Woods (1971) cruciale. Rally XXI sec. legati a crisi: 2008, debito sovrano UE, COVID-19, attuale. Max storico corretto per inflazione: 1980.</p>
+                    <div class="chart-container"><canvas id="historicalPerformanceChart"></canvas></div>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Ruolo dell'Oro negli Investimenti</h3>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-neutral-600">
+                        <li><strong>Diversificazione:</strong> Bassa/negativa correlazione con azioni/obbligazioni.</li>
+                        <li><strong>Copertura Inflazione/Riserva Valore:</strong> Lunga storia, valore intrinseco.</li>
+                        <li><strong>Liquidità:</strong> Facilmente scambiabile globalmente.</li>
+                        <li><strong>Allocazione Raccomandata:</strong> Sprott 10-15%; Morningstar <=15% come "assicurazione".</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="confronti" class="content-section pt-8">
+            <h2 class="text-2xl font-bold text-amber-700 mb-6 text-center">Analisi Comparativa ed ESG</h2>
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Oro vs. Bitcoin</h3>
+                    <div class="table-responsive">
+                        <table class="min-w-full divide-y divide-neutral-200 text-sm">
+                            <thead class="bg-amber-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left font-semibold text-amber-700">Caratteristica</th>
+                                    <th class="px-4 py-2 text-left font-semibold text-amber-700">Oro</th>
+                                    <th class="px-4 py-2 text-left font-semibold text-amber-700">Bitcoin</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-neutral-200">
+                                <tr><td class="px-4 py-2">Tipo Asset</td><td class="px-4 py-2">Fisico, naturale</td><td class="px-4 py-2">Digitale, tecnico</td></tr>
+                                <tr><td class="px-4 py-2">Base Storica</td><td class="px-4 py-2">Millenni</td><td class="px-4 py-2">Dal 2009</td></tr>
+                                <tr><td class="px-4 py-2">Offerta</td><td class="px-4 py-2">Geologicamente limitata</td><td class="px-4 py-2">Algoritmicamente limitata</td></tr>
+                                <tr><td class="px-4 py-2">Volatilità</td><td class="px-4 py-2">Inferiore</td><td class="px-4 py-2">Elevata</td></tr>
+                                <tr><td class="px-4 py-2">Ruolo in Crisi</td><td class="px-4 py-2">Risk-off</td><td class="px-4 py-2">Misto, spesso risk-on</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Impatto ESG sull'Oro</h3>
+                    <div class="space-y-2">
+                         <button class="collapsible w-full text-left font-medium text-neutral-700 hover:text-amber-600 flex justify-between items-center text-sm">
+                            <span>🌿 Ambientale</span>
+                            <span class="arrow-icon text-amber-600 text-lg transform transition-transform duration-300">&#x25B6;</span>
+                        </button>
+                        <div class="accordion-content mt-1 text-xs text-neutral-500">
+                            <p>Focus su riduzione impronta carbonio, biodiversità, uso risorse (acqua, rifiuti). Es. Pan African Resources: energia solare, riciclo acqua.</p>
+                        </div>
+                         <button class="collapsible w-full text-left font-medium text-neutral-700 hover:text-amber-600 flex justify-between items-center text-sm">
+                            <span>🤝 Sociale</span>
+                            <span class="arrow-icon text-amber-600 text-lg transform transition-transform duration-300">&#x25B6;</span>
+                        </button>
+                        <div class="accordion-content mt-1 text-xs text-neutral-500">
+                            <p>Impegno stakeholder, lavoro equo, diversità, salute/sicurezza, contributi comunità (infrastrutture, istruzione).</p>
+                        </div>
+                         <button class="collapsible w-full text-left font-medium text-neutral-700 hover:text-amber-600 flex justify-between items-center text-sm">
+                            <span>🏛️ Governance</span>
+                            <span class="arrow-icon text-amber-600 text-lg transform transition-transform duration-300">&#x25B6;</span>
+                        </button>
+                        <div class="accordion-content mt-1 text-xs text-neutral-500">
+                            <p>Gestione sostenibile risorse, informative trasparenti, anticorruzione, conformità legale. Guida LBMA per approvvigionamento responsabile.</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-neutral-600 mt-3">Investitori integrano criteri ESG, privilegiando aziende con solide performance. Trasparenza catena approvvigionamento cruciale.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="outlook" class="content-section pt-8">
+            <h2 class="text-2xl font-bold text-amber-700 mb-6 text-center">Outlook Futuro e Opinioni Esperti</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Previsioni Prezzi Oro (2025-2026)</h3>
+                    <p class="text-sm text-neutral-600 mb-4">Molti esperti e istituzioni sono rialzisti. Goldman Sachs: $3.700 (fine 2025), $4.000 (metà 2026). J.P. Morgan: verso $3.000 (2025).</p>
+                    <div class="chart-container"><canvas id="priceForecastChart"></canvas></div>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-neutral-700 mb-4">Outlook World Gold Council e Incertezze</h3>
+                    <p class="text-sm text-neutral-600 mb-2"><strong>WGC:</strong> Forte domanda Q1 2025 (1.206t, +1% YoY), trainata da ETF e acquisti banche centrali. Outlook a lungo termine forte.</p>
+                    <p class="text-sm text-neutral-600 mb-2"><strong>Incertezze Chiave:</strong> Politica commerciale USA, tensioni geopolitiche, inflazione, decisioni tassi Fed/BCE.</p>
+                    <p class="text-sm text-neutral-600">L'attuale forza dell'oro appare multiforme e resiliente a diversi scenari economici.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center mt-12 py-6 border-t border-neutral-200">
+            <p class="text-sm text-neutral-600">&copy; 2025 Oro Insights. Dati basati sul report "Analisi Approfondita del Mercato Aurifero" (Maggio 2025).</p>
+        </footer>
+    </main>
+
+<script>
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('.content-section');
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    function updateActiveLink(targetId) {
+        console.log("Updating active link for:", targetId); // DEBUG LOG
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === `#${targetId}`) {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    function showSection(targetId) {
+        console.log("Attempting to show section:", targetId); // DEBUG LOG
+        let foundSection = false;
+        sections.forEach(section => {
+            if (section.id === targetId) {
+                section.classList.add('active');
+                console.log("Activated section:", section.id); // DEBUG LOG
+                foundSection = true;
+            } else {
+                section.classList.remove('active');
+            }
+        });
+        if (!foundSection) {
+            console.error("Section with ID '" + targetId + "' not found."); // DEBUG LOG
+        }
+        updateActiveLink(targetId);
+        if (mobileMenu.classList.contains('hidden') === false) {
+            mobileMenu.classList.add('hidden');
+        }
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+            console.log("Link clicked, targetId:", targetId); // DEBUG LOG
+            showSection(targetId);
+            window.location.hash = targetId; 
+        });
+    });
+    
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.collapsible').forEach(button => {
+        button.addEventListener('click', () => {
+            const isActive = button.classList.contains('active');
+            if (!isActive) {
+                button.classList.add('active');
+                button.querySelector('.arrow-icon').innerHTML = '&#x25BC;'; 
+            } else {
+                 button.classList.remove('active');
+                 button.querySelector('.arrow-icon').innerHTML = '&#x25B6;';
+            }
+        });
+    });
+    
+    function wrapLabels(label, maxWidth) {
+        if (typeof label !== 'string') { 
+            return [String(label)]; 
+        }
+        const words = label.split(' ');
+        let line = '';
+        const lines = [];
+        for (let i = 0; i < words.length; i++) {
+            const testLine = line + words[i] + ' ';
+            if (testLine.length > maxWidth && i > 0) {
+                lines.push(line.trim());
+                line = words[i] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line.trim());
+        return lines;
+    }
+
+    // Chart Data and Initialization
+    const recentPriceData = {
+        labels: ['Gen 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025'],
+        datasets: [{
+            label: 'London Gold Price (USD/oncia)',
+            data: [2800, 2950, 2988.33, 3217.64], 
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true,
+            tension: 0.1
+        }]
+    };
+    new Chart(document.getElementById('recentPriceChart'), {
+        type: 'line',
+        data: recentPriceData,
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+    });
+
+    const etfFlowsData = {
+        labels: ['ETF Auriferi Cina (Apr 2025)'],
+        datasets: [{
+            label: 'Afflussi (tonnellate)',
+            data: [65],
+            backgroundColor: '#10b981',
+        }]
+    };
+    new Chart(document.getElementById('etfFlowsChart'), {
+        type: 'bar',
+        data: etfFlowsData,
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+    });
+
+    const centralBankOriginalLabels = ['Polonia', 'Cina', 'Kazakhstan', 'Rep. Ceca', 'Turchia', 'India', 'Qatar', 'Egitto', 'SOFAZ (Azerbaijan)'];
+    const centralBankData = {
+        labels: centralBankOriginalLabels.map(label => wrapLabels(label, 10)),
+        datasets: [{
+            label: 'Acquisti Netti Oro Q1 2025 (tonnellate)',
+            data: [49, 13, 6, 5, 4, 3, 3, 1, 19],
+            backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#6366f1', '#06b6d4', '#f59e0b'],
+        }]
+    };
+    new Chart(document.getElementById('centralBankChart'), {
+        type: 'bar',
+        data: centralBankData,
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { y: { ticks: { autoSkip: false } } } }
+    });
+
+    const demandBySectorData = {
+        labels: ['Gioielleria', 'Tecnologia', 'Invest. Lingotti/Monete', 'Invest. ETF', 'Banche Centrali'],
+        datasets: [{
+            label: 'Domanda Oro Q1 2025 (tonnellate)',
+            data: [380, 80, 325, 226, 244], 
+            backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#f97316', '#8b5cf6'],
+        }]
+    };
+    new Chart(document.getElementById('demandBySectorChart'), {
+        type: 'doughnut',
+        data: demandBySectorData,
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+    
+    const historicalPerformanceData = {
+        labels: ['YTD 2025 (Apr)', '1 Anno (Apr 2025)', '5 Anni', '20 Anni'],
+        datasets: [{
+            label: 'Variazione % Prezzo Oro (USD)',
+            data: [22.14, 38.01, 83.78, 659.85],
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(22, 163, 74, 0.1)',
+            fill: true,
+            tension: 0.1
+        }]
+    };
+    new Chart(document.getElementById('historicalPerformanceChart'), {
+        type: 'line',
+        data: historicalPerformanceData,
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+    });
+    
+    const priceForecastOriginalLabels = ['Goldman Sachs (Fine 2025)', 'Goldman Sachs (Metà 2026)', 'J.P. Morgan (2025)', 'Bank of America (2025)', 'Bank of America (2026)', 'C3 Bullion (Fine 2025)', 'Virginia Uni. (Metà 2025)'];
+    const priceForecastData = {
+        labels: priceForecastOriginalLabels.map(label => wrapLabels(label, 16)),
+        datasets: [{
+            label: 'Prezzo Previsto Oro (USD/oncia)',
+            data: [3700, 4000, 2950, 3063, 3350, 3500, 3250], 
+            backgroundColor: ['#2563eb', '#2563eb', '#1d4ed8', '#1e40af', '#1e40af', '#172554', '#1e3a8a'],
+        }]
+    };
+    new Chart(document.getElementById('priceForecastChart'), {
+        type: 'bar',
+        data: priceForecastData,
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } }, 
+            scales: { 
+                x: { 
+                    ticks: { 
+                        autoSkip: false
+                    } 
+                } 
+            } 
+        }
+    });
+
+    // Initial section display based on hash or default
+    document.addEventListener('DOMContentLoaded', () => { // Ensure DOM is fully loaded
+        const initialHash = window.location.hash.substring(1);
+        if (initialHash && document.getElementById(initialHash)) {
+            console.log("Initial load from hash:", initialHash); // DEBUG LOG
+            showSection(initialHash);
+        } else {
+            console.log("Initial load, default to panoramica"); // DEBUG LOG
+            showSection('panoramica'); 
+        }
+    });
+    
+    // Handle back/forward navigation
+    window.addEventListener('popstate', () => {
+        const hash = window.location.hash.substring(1);
+        console.log("Popstate event, hash:", hash); // DEBUG LOG
+        if (hash && document.getElementById(hash)) {
+            showSection(hash);
+        } else {
+            showSection('panoramica');
+        }
+    });
+
+</script>
+</body>
+</html>
